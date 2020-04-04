@@ -1,4 +1,4 @@
-In this post, we have multiple antagonists, two victims (my sanity and the loss of an entire Saturday), a lost voice from screaming in frustration and an outcome. It's a journey (at least from my perspective), but a potentially viable outcome.
+In this post, we have multiple antagonists, two victims (my sanity and the loss of almost an entire Saturday), a lost voice from screaming in frustration and an outcome. It's a journey (at least from my perspective), but a potentially viable outcome.
 
 # Intro
 
@@ -61,7 +61,7 @@ Sod it. The issue we have here is `System.Security.Cryptography.SHA256Cng` is no
 # Part Trois
 Years and years ago when I first starting playing with PowerShell, I built a WinForms project that was a File System ACL generator that executed PowerShell scripts. The reason for that was, manipulating ACL's was far easier for me in PowerShell than in C# and building a GUI in Visual Studio was easier than doing it in PowerShell. I've since learnt about WPF and that certainly would have made my life easier back then.
 
-However, C# code executing PowerShell code can be done. And thy will be done.
+However, C# code executing PowerShell code can be done. And thy will be done. However at this point, I just bought a Switch Lite and Animal Crossing, so I did take a short break (followed by a nap) and came back to it later in the day.
 
 I've built plenty of .NET Core C# Function Apps, but never a .NET Framework C# Function App but upon the launch of a new Visual Studio Project for one, it looks about the same as a .NET Core one.
 
@@ -106,3 +106,36 @@ To see if this will work the way I think it will, we have a very basic function;
 Testing that out and...success!!! I can see all the running processes on my development desktop.
 
 Inside the Visual Studio Project, I created a folder called `Scripts` and a small PowerShell script that will import the module and try to connect.
+
+I fumble together a small piece of code that from what I can understand, should successfully execute PowerShell;
+
+`
+Process powershell = new Process
+{
+    StartInfo = new ProcessStartInfo
+    {
+        FileName = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        Arguments = "D:\\home\\site\\wwwroot\\Scripts\\test-script.ps1",
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        CreateNoWindow = true
+    }
+};
+
+powershell.Start();
+
+while (!powershell.StandardOutput.EndOfStream)
+{
+    log.Info(powershell.StandardOutput.ReadLine());
+}
+`
+
+The Script just dumps "Hello World" into a text file. Testing this locally worked! I had the file in the directory I specified. So I deploy to my Function App, test it and...a 500 error...
+
+## Son de la @%$#!
+I've just realised that there isn't a C:\ on Function Apps, it's a D:\...so we change C:\ to D:\, republish and test and...successful run! But no text file was created :(
+
+Is the issue that we can't save files in a folder where it's a pre-compiled binary? So I change the output path to `D:\local\Temp`, republish and test. Another successful run but no text file.
+
+Is redirecting stdout to the log causing the issue?
