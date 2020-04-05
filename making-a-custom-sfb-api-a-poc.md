@@ -67,7 +67,8 @@ I've built plenty of .NET Core C# Function Apps, but never a .NET Framework C# F
 
 To see if this will work the way I think it will, we have a very basic function;
 
-`public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequestMessage req, TraceWriter log)
+`
+public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequestMessage req, TraceWriter log)
         {
             log.Info("C# HTTP trigger function processed a request.");
 
@@ -101,7 +102,8 @@ To see if this will work the way I think it will, we have a very basic function;
             return name == null
                 ? req.CreateResponse(HttpStatusCode.BadRequest, "Please pass a name on the query string or in the request body")
                 : req.CreateResponse(HttpStatusCode.OK, "Hello " + name);
-        }`
+        }
+`
 
 Testing that out and...success!!! I can see all the running processes on my development desktop.
 
@@ -115,10 +117,10 @@ Process powershell = new Process
     StartInfo = new ProcessStartInfo
     {
         FileName = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-        Arguments = "D:\\home\\site\\wwwroot\\Scripts\\test-script.ps1",
-        UseShellExecute = false,
+        Arguments = "D:\\home\\data\\test-script.ps1",
+        UseShellExecute = true,
         RedirectStandardOutput = true,
-        RedirectStandardError = true,
+        RedirectStandardError = false,
         CreateNoWindow = true
     }
 };
@@ -138,4 +140,11 @@ I've just realised that there isn't a C:\ on Function Apps, it's a D:\...so we c
 
 Is the issue that we can't save files in a folder where it's a pre-compiled binary? So I change the output path to `D:\local\Temp`, republish and test. Another successful run but no text file.
 
-Is redirecting stdout to the log causing the issue?
+Is redirecting stdout to the log causing the issue? Didn't appear to be, but I was getting an error and I was struggling to trap it.
+
+I was struggling with testing this locally and deploying, so I reverted back to a .NET Core C# Function App and then discovered what my issue was. I was saving data to a location that is transient. As such, I found that `D:\home\data` is recommended (https://github.com/Azure/azure-functions-host/issues/3626#issuecomment-431485622). If you want it to be transient and only have it necessary for during the functions run time, you can use `%TEMP%`.
+
+The PowerShell script started to execute, then I get met with `The Win32 internal error “The handle is invalid” 0x6 occurred while getting the console mode`. A quick search suggested that this occurs when commands use `Write-Progress` and when there's no interactive window, it doesn't like it. I tried the solution here (https://stackoverflow.com/questions/33401244/the-win32-internal-error-the-handle-is-invalid-0x6-occurred-while-getting-the) and we had success!!
+
+I finally had a file! Executing the actual script I wanted to get a user out of Skype for Business Online was...successful!!!
+
