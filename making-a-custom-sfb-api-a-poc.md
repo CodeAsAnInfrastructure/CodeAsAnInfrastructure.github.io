@@ -1,6 +1,6 @@
-In this post, we have multiple antagonists, two victims (my sanity and the loss of almost an entire Saturday), a lost voice from screaming in frustration and an outcome. It's a journey (at least from my perspective), but a potentially viable outcome.
+# Building a Skype for Business Online API with Function Apps and PowerShell
 
-# Intro
+In this post, we have multiple antagonists, two victims (my sanity and the loss of almost an entire Saturday), a lost voice from screaming in frustration and an outcome. It's a journey (at least from my perspective), but a potentially viable outcome.
 
 In working on a project in my day job, I ran into the need to create a Resource Account from a web portal I was developing. I figured that it'd be pretty straightforward because there'd be a REST API endpoint somewhere I could hit, right??
 
@@ -156,3 +156,9 @@ I finally had a file! Executing the actual script I wanted to get a user out of 
 Now, the script was hardcoded with a username, so that needs to be able to accept parameters that come in from the Function App. After modifying that and a couple of tweaks to the C# Function App, we have the following set of code;
 
 ` place working code here `
+
+# What the Function App Returns
+Because the PowerShell script we run returns a json string, this is what we get back from the Function App, too. However, in the path from the script to the Function App, our `DateTime` objects are represented as `/Date(1497525951000)/` rather than `15/06/2017 8:55:51 PM`. When pasting the JSON into Visual Studio as a Class, the DateTime fields were set to that, so it looks like no further work is needed. We have a JSON string that we can use how we see fit.
+
+# Next Steps
+The PowerShell script has a password saved in it in clear text, which is a pretty big no-no. These credentials should be stored in Key Vault and called when required. You can see how I did this here.
