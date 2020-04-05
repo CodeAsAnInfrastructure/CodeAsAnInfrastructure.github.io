@@ -23,9 +23,11 @@ Skype for Business is SOAP XML and not JSON. So now we definitely abandon the pl
 ## What do the modules say?
 I dove into the imported modules that get downloaded when you run `$session = New-CsOnlineSession;Import-PsSession $session` and spotted that it uses `Invoke-Command` against `adminau1.online.lync.com`. I thought that since I know how to get a token, I should be able to create a credential object with the access token and get a response? Should is the operative word there. I got the following error;
 
-`[adminau1.online.lync.com] Connecting to remote server adminau1.online.lync.com failed with the following error message : WinRM cannot complete the operation. Verify that the specified computer name is valid, that the computer is accessible
+```
+[adminau1.online.lync.com] Connecting to remote server adminau1.online.lync.com failed with the following error message : WinRM cannot complete the operation. Verify that the specified computer name is valid, that the computer is accessible
 over the network, and that a firewall exception for the WinRM service is enabled and allows access from this computer. By default, the WinRM firewall exception for public profiles limits access to remote computers within the same local
-subnet`
+subnet
+```
 
 Okay, it was worth a try. My theory here is that the imported PowerShell commands leverage the PowerShell session that was established for authentication and it probably wasn't going to get me much further ahead going down this path.
 
@@ -43,18 +45,22 @@ First step is to ~~kill all the lawyers~~ create a folder called `Modules` at `/
 ## Looking good!
 After creating the Modules folder and then the subsequent `SkypeOnlineConnector` folder and uploading all the content files (you can drag and drop from the source folder on Windows into your browser), we try to import the module;
 
-`try {
+```powershell
+try {
     Import-Module "SkypeOnlineConnector" -ErrorAction Stop
     Write-Output "Imported Connector Module"
 } catch {
     Write-Output "Failed to import Connector Module: [$($_.Exception.Message)]"
-}`
+}
+```
 
 And we get...`[Information] OUTPUT: Imported Connector Module`. Excellent! Now we try to create an online session
 
 ## Computer says nooooooo...
 
-`[Error] EXCEPTION: Get-CsOnlinePowerShellAccessToken : One or more errors occurred. (Could not load type 'System.Security.Cryptography.SHA256Cng' from assembly 'System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.)`
+```
+[Error] EXCEPTION: Get-CsOnlinePowerShellAccessToken : One or more errors occurred. (Could not load type 'System.Security.Cryptography.SHA256Cng' from assembly 'System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'.)
+```
 
 Sod it. The issue we have here is `System.Security.Cryptography.SHA256Cng` is not available in .NET Core, which is what PowerShell Function Apps are run off. There's no option to use the full .NET Framework for PowerShell in a Function App.
 
@@ -67,43 +73,42 @@ I've built plenty of .NET Core C# Function Apps, but never a .NET Framework C# F
 
 To see if this will work the way I think it will, we have a very basic function;
 
-`
+```c#
 public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequestMessage req, TraceWriter log)
+{
+    log.Info("C# HTTP trigger function processed a request.");
+
+    // parse query parameter
+    string name = req.GetQueryNameValuePairs()
+        .FirstOrDefault(q => string.Compare(q.Key, "name", true) == 0)
+        .Value;
+
+    if (name == null)
+    {
+        // Get request body
+        dynamic data = await req.Content.ReadAsAsync<object>();
+        name = data?.name;
+    }
+
+    using (PowerShell psInstance = PowerShell.Create())
+    {
+        psInstance.AddScript("Get-Module");
+        Collection<PSObject> psOutput = psInstance.Invoke();
+
+        foreach (PSObject item in psOutput)
         {
-            log.Info("C# HTTP trigger function processed a request.");
-
-            // parse query parameter
-            string name = req.GetQueryNameValuePairs()
-                .FirstOrDefault(q => string.Compare(q.Key, "name", true) == 0)
-                .Value;
-
-            if (name == null)
+            if (item != null)
             {
-                // Get request body
-                dynamic data = await req.Content.ReadAsAsync<object>();
-                name = data?.name;
+                var blah = item;
             }
-
-            using (PowerShell psInstance = PowerShell.Create())
-            {
-                psInstance.AddScript("Get-Module");
-                Collection<PSObject> psOutput = psInstance.Invoke();
-
-                foreach (PSObject item in psOutput)
-                {
-                    if (item != null)
-                    {
-                        var blah = item;
-                    }
-                }
-            }
-
-
-            return name == null
-                ? req.CreateResponse(HttpStatusCode.BadRequest, "Please pass a name on the query string or in the request body")
-                : req.CreateResponse(HttpStatusCode.OK, "Hello " + name);
         }
-`
+    }
+
+    return name == null
+        ? req.CreateResponse(HttpStatusCode.BadRequest, "Please pass a name on the query string or in the request body")
+        : req.CreateResponse(HttpStatusCode.OK, "Hello " + name);
+}
+```
 
 Testing that out and...success!!! I can see all the running processes on my development desktop.
 
@@ -111,7 +116,7 @@ Inside the Visual Studio Project, I created a folder called `Scripts` and a smal
 
 I fumble together a small piece of code that from what I can understand, should successfully execute PowerShell;
 
-`
+```c#
 Process powershell = new Process
 {
     StartInfo = new ProcessStartInfo
@@ -131,7 +136,7 @@ while (!powershell.StandardOutput.EndOfStream)
 {
     log.Info(powershell.StandardOutput.ReadLine());
 }
-`
+```
 
 The Script just dumps "Hello World" into a text file. Testing this locally worked! I had the file in the directory I specified. So I deploy to my Function App, test it and...a 500 error...
 
@@ -148,3 +153,6 @@ The PowerShell script started to execute, then I get met with `The Win32 interna
 
 I finally had a file! Executing the actual script I wanted to get a user out of Skype for Business Online was...successful!!!
 
+Now, the script was hardcoded with a username, so that needs to be able to accept parameters that come in from the Function App. After modifying that and a couple of tweaks to the C# Function App, we have the following set of code;
+
+` place working code here `
