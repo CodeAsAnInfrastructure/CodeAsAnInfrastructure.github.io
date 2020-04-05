@@ -161,4 +161,16 @@ Now, the script was hardcoded with a username, so that needs to be able to accep
 Because the PowerShell script we run returns a json string, this is what we get back from the Function App, too. However, in the path from the script to the Function App, our `DateTime` objects are represented as `/Date(1497525951000)/` rather than `15/06/2017 8:55:51 PM`. When pasting the JSON into Visual Studio as a Class, the DateTime fields were set to that, so it looks like no further work is needed. We have a JSON string that we can use how we see fit.
 
 # Next Steps
-The PowerShell script has a password saved in it in clear text, which is a pretty big no-no. These credentials should be stored in Key Vault and called when required. You can see how I did this here.
+The PowerShell script has a password saved in it in clear text, which is a pretty big no-no. These credentials should be stored in Key Vault and called when required. I followed Daniel Krzyczkowski's guide [here](https://daniel-krzyczkowski.github.io/Integrate-Key-Vault-Secrets-With-Azure-Functions/), so if this is something you're intending on putting into production, please, for the love of `$Diety`, do it using Key Vault.
+
+The received credentials from the Key Vault will be injected into the PowerShell script via Parameters. In a perfect world, I'd be able to do this by passing an OAuth token through or failing that, a Certificate. The OAuth token may still be viable, but I can't figure that one out.
+
+I'd suggest, where possible, to also restrict access to the Key vault via the Network options, if your environment is configured in such a way.
+
+# Summary
+While getting this to work is a huge step forward for me in my project, it takes 20 seconds to get a response back since;
+*We have to wait for the Function App to fire up
+*Connect to Skype for Business Online PowerShell
+*Then query the user 
+
+I've got some ideas about loading 
